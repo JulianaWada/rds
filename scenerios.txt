@@ -1,0 +1,8 @@
+
+
+
+ Four sceneriaos
+Native authentication to the database through a lamda
+iam authetication with IAM enabled at database side through a lambda
+native authetication to the database through a lambda through RDS proxy
+iam authentication with secrets manager with proxy

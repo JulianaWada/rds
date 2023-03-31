@@ -164,6 +164,7 @@ resource "aws_lambda_function" "iam_auth_secrets_proxy" {
       DB_NAME     = aws_db_instance.mysql_instance.name
       DB_USER     = aws_db_instance.mysql_instance.username
       DB_PASSWORD = aws_db_instance.mysql_instance.password
+      SECRET_NAME=aws_secretsmanager_secret.mysql_proxy_secret3.name
     }
   }
   vpc_config {

@@ -56,12 +56,12 @@ resource "aws_db_instance" "mysql_instance" {
 
 
 
-resource "aws_secretsmanager_secret" "mysql_proxy_secret3" {
-  name = "my_mysql_proxy_secret3"
+resource "aws_secretsmanager_secret" "mysql_proxy_secret4" {
+  name = "my_mysql_proxy_secret4"
 }
 
-resource "aws_secretsmanager_secret_version" "mysql_proxy_secret_version2" {
-  secret_id = aws_secretsmanager_secret.mysql_proxy_secret3.id
+resource "aws_secretsmanager_secret_version" "mysql_proxy_secret_version3" {
+  secret_id = aws_secretsmanager_secret.mysql_proxy_secret4.id
   secret_string = jsonencode({
     username = "admin"
     password = "mypassword"
@@ -80,7 +80,7 @@ resource "aws_db_proxy" "mysql_proxy" {
 
     // SecretArn is required in UserAuthConfig
     auth_scheme = "SECRETS"
-    secret_arn  = aws_secretsmanager_secret_version.mysql_proxy_secret_version2.arn
+    secret_arn  = aws_secretsmanager_secret_version.mysql_proxy_secret_version3.arn
   }
 }
 
@@ -164,7 +164,7 @@ resource "aws_lambda_function" "iam_auth_secrets_proxy" {
       DB_NAME     = aws_db_instance.mysql_instance.name
       DB_USER     = aws_db_instance.mysql_instance.username
       DB_PASSWORD = aws_db_instance.mysql_instance.password
-      SECRET_NAME=aws_secretsmanager_secret.mysql_proxy_secret3.name
+      SECRET_NAME=aws_secretsmanager_secret.mysql_proxy_secret4.name
     }
   }
   vpc_config {
@@ -180,6 +180,7 @@ resource "aws_lambda_function" "iam_auth_secrets_proxy" {
 
 resource "aws_iam_role" "lambda_role" {
   name = "lambda_role"
+  
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [
@@ -190,51 +191,48 @@ resource "aws_iam_role" "lambda_role" {
         }
         Action = "sts:AssumeRole"
       }
-     
     ]
-     policy      = <<EOF
-     {
-    "Version": "2012-10-17",
-    "Statement": [
-     policy={
-         {
-    "Version": "2012-10-17",
-     "Statement": [
-         {
-            "Sid": "VisualEditor0",
-             "Effect": "Allow",
-             "Action": [
-                 "ec2:CreateNetworkInterface",
-                 "ec2:DescribeNetworkInterfaces",
-                 "ec2:DeleteNetworkInterface"
-             ],
-             "Resource": "*"
-         },
-         {
-             "Sid": "VisualEditor1",
-             "Effect": "Allow",
-             "Action": "rds-db:connect",
-             "Resource": "arn:aws:rds:us-east-1:439828058928:db-proxy:prx-025e6f14ed5cd66d9/budget_user"
-        }
-        
+  })
+    
+}
 
-     }
-  EOF
+resource "aws_iam_policy" "lambda_policy" {
+  name = "lambda_policy"
+  
+  policy = jsonencode({
+    Version = "2012-10-17",
+    Statement = [
+      {
+        Sid = "VisualEditor0"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface"
+        ]
+        Resource = "*"
+      },
+      {
+        Sid = "VisualEditor1"
+        Effect = "Allow"
+        Action = "rds-db:connect"
+        Resource = "arn:aws:rds:us-east-1:439828058928:db-proxy:prx-025e6f14ed5cd66d9/budget_user"
+      }
+    ]
   })
 }
+
+# Attach the policy to the IAM role
+resource "aws_iam_role_policy_attachment" "lambda_role_policy_attachment" {
+  policy_arn = aws_iam_policy.lambda_policy.arn
+  role = aws_iam_role.lambda_role.name
+}
+
+
 resource "aws_iam_role_policy_attachment" "lambda_policy_attachment" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
   role       = aws_iam_role.lambda_role.name
 }
 
-resource "aws_iam_role_policy_attachment" "lambda_role_attach" {
-  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2FullAccess"
-  role       = aws_iam_role.lambda_role.name
-}
-
-resource "aws_iam_role_policy_attachment" "proxies_policy_attachment" {
-  policy_arn = "arn:aws:iam::aws:policy/AWSXrayWriteOnlyAccess"
-  role       = aws_iam_role.lambda_role.name
-}
 
 
